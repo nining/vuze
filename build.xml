@@ -8,12 +8,10 @@ javadoc link and linksource to core
 -->
 
 
-<project basedir="." default="run" name="VuzeClient">
+<project basedir="." default="package" name="VuzeClient">
 
 	<!-- Load vars from external properties file -->
-	<condition property="using.ext.props" >
-	    <isset property="build.props.file" />
-	</condition>
+	<condition property="using.ext.props" > <isset property="build.props.file" /> </condition>
 	<property name="build.properties" value="${build.props.file}"/>
 	<property file="${build.properties}" />	
 	<echo message="using.ext.props = ${using.ext.props}" />
@@ -27,6 +25,8 @@ javadoc link and linksource to core
 	<property name="azureus2.dir" value="azureus2"/>
 	<property name="azureus3.dir" value="azureus3"/>
 	<property name="uis.dir" value="uis"/>
+	<property name="docs.dir" value="docs"/>
+			
 	
 	<property name="build.dir" value="build"/>
 	<property name="dist.dir" value="dist"/>
@@ -55,7 +55,7 @@ javadoc link and linksource to core
 
 	<!-- METHODS -->
 
-	<target name="run" depends="clean,preprocess,build,package,docs,postprocess" description="Make everything">
+	<target name="run" depends="clean,preprocess,package,postprocess" description="For automated builds">
 		<echo message="Build DONE."/>
 	</target>
 	
@@ -73,11 +73,11 @@ javadoc link and linksource to core
 	</target>
 	   
 	
-	<target name="preprocess" >	
+	<target name="preprocess" if="using.ext.props" >	
 		 <!-- Tag source with version info -->
 		 <property name="constants.file" value="${azureus2.dir}/src/org/gudy/azureus2/core3/util/Constants.java"/>
 		 <replace file="${constants.file}" token="_CVS&quot;" value="_B${minor.ver}&quot;" summary="true" />
-		 <replace file="${constants.file}" token="@@build.version@@" value="${build.ver}" summary="true" />
+		 <replace file="${constants.file}" token="@build.version@" value="${build.ver}" summary="true" />
 	</target>
 	
 	
@@ -153,20 +153,7 @@ javadoc link and linksource to core
 				<arg value="-c" />
 				<arg value="svn info . | grep Revision | sed &quot;s/Revision: //&quot;" />
 			</exec>		
-			<echo message="svn.revision.new=${svn.revision.new}" />
-			
-			<!-- Generate changelog -->
-	      <exec executable="${svn2cl.exec}" dir="." outputproperty="changelog.text" >
-	      	<arg value="--stdout" />
-	      	<arg value="--strip-prefix=" />
-	      	<arg value="--break-before-msg" />
-	      	<arg value="-i" />
-	      	<arg value="-a" />
-	      	<arg value="-r" />
-	      	<arg value="${svn.revision}:${svn.revision.new}" />
-	      	<arg value="${basedir}" />
-	      </exec>		
-			<echo message="changelog.text = ${changelog.text}" />
+			<echo message="svn.revision.new=${svn.revision.new}" />			
 			
 			 <!-- Increment build info -->
 			 <propertyfile file="${build.properties}" >
@@ -174,6 +161,30 @@ javadoc link and linksource to core
 			 	  <entry key="svn.revision" value="${svn.revision.new}" />
 			 	  <entry key="build.date" type="date" value="now" pattern="dd-MM-yyyy HH:mm:ss" />
 			 </propertyfile>
+		
+		    <!-- Generate changelog -->
+			 <exec executable="${svn2cl.exec}" dir="." outputproperty="changelog.text" >
+			      	<arg value="--stdout" />
+			      	<arg value="--strip-prefix=" />
+			      	<arg value="--break-before-msg" />
+			      	<arg value="-i" />
+			      	<arg value="-a" />
+			      	<arg value="-r" />
+			      	<arg value="${svn.revision}:${svn.revision.new}" />
+			      	<arg value="${basedir}" />
+			  </exec>
+			  <echo message="changelog.text = ${changelog.text}" />
+		     <echo file="${dist.dir}/Vuze_${build.ver}_changelog.txt" message="${changelog.text}" />
+		
+			  <!-- Fill in templates -->
+		     <tstamp> <format property="timestamp" pattern="dd MMM yyyy hh:mm:ss aa" /> </tstamp>
+		     <property name="jar.name" value="Azureus${major.ver}-B${minor.ver}.jar" />
+			  <replace dir="${docs.dir}" summary="true" >
+			  	  <replacefilter token="@timestamp@"      value="${timestamp}" />
+			  	  <replacefilter token="@jar.name@"       value="${jar.name}" />
+			  	  <replacefilter token="@changelog.text@" value="${changelog.text}" />
+			  </replace>			  	
+		     
 		</target>
 	
 </project>
